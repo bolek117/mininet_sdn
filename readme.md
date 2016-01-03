@@ -1,14 +1,4 @@
-Good morning Everyone,
-As probably You all now by now, Laboratory class on 18.11 is not going to take place due to the fact of my delegation.
-At this class, we were meant to introduce ourselves to the 2nd part of laboratory (2nd and hopefully last project).
-What I would like to propose is:
-- I will briefly write about cases to be done for the next project.
-- You will divide Yourself into 3 groups, each performing other case (as previously I would like, these 3 groups to be equal).
-- After assigning each case, You brainstorm about case and for the next meeting 2.12, You present your plans, conclusions eventually your doubts.
-
-OK, so let's start.
-
-What are main goal will be: Undelayed forwarding in Software Defined Networks.
+Undelayed forwarding in Software Defined Networks.
 Problem:
 Classical enterprise topology could look like this:
 
