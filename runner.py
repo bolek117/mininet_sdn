@@ -1,13 +1,21 @@
 #!/usr/bin/env python
+import sys
 
 from topo.simpletopo import SimpleNet
 from argparse import ArgumentParser
 
-if __name__ == '__main__':
+
+def parse_args():
     parser = ArgumentParser()
-    parser.add_argument('-s', '--switches', type=int, default=1, dest='no_of_switches')
-    parser.add_argument('-c', '--pingCount', type=int, default=1, dest='count')
-    args = parser.parse_args()
+
+    parser.add_argument('-s', '--switches', type=int, default=1, dest='no_of_switches',
+                        help='Sets number of the switches in chain HOST_1 <-> Switch_1 <-> ... <-> Switch_N <-> HOST_2')
+
+    return parser.parse_args()
+
+
+if __name__ == '__main__':
+    args = parse_args()
 
     net = SimpleNet(args.no_of_switches)
     net.start()
@@ -15,8 +23,20 @@ if __name__ == '__main__':
     first = net.hosts[0]
     last = net.hosts[1]
 
-    count = args.count
+    while True:
+        cmd = raw_input("$ ")
 
-    command = str.format('ping -c {} {}', count, last.IP())
-    print first.cmd(command)
-    net.stop()
+        if cmd == "exit" or cmd == "quit":
+            net.stop()
+            sys.exit(0)
+        elif cmd == "monitor":
+            lst = net.monitor()
+
+            for i in lst:
+                print i
+                
+        elif cmd == "pingall":
+            print net.pingAll()
+        else:
+            print first.cmd(cmd)
+
