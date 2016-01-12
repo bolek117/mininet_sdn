@@ -1,8 +1,9 @@
 #!/usr/bin/env python
-import sys
 
 from topo.simpletopo import SimpleNet
 from argparse import ArgumentParser
+
+import mininet.cli
 
 
 def parse_args():
@@ -20,23 +21,6 @@ if __name__ == '__main__':
     net = SimpleNet(args.no_of_switches)
     net.start()
 
-    first = net.hosts[0]
-    last = net.hosts[1]
+    cli = mininet.cli.CLI(net)
 
-    while True:
-        cmd = raw_input("$ ")
-
-        if cmd == "exit" or cmd == "quit":
-            net.stop()
-            sys.exit(0)
-        elif cmd == "monitor":
-            lst = net.monitor()
-
-            for i in lst:
-                print i
-                
-        elif cmd == "pingall":
-            print net.pingAll()
-        else:
-            print first.cmd(cmd)
-
+    net.stop()
