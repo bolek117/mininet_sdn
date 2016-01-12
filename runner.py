@@ -19,8 +19,7 @@ if __name__ == '__main__':
     args = parse_args()
 
     net = SimpleNet(args.no_of_switches)
+
     net.start()
-
     cli = mininet.cli.CLI(net)
-
     net.stop()
