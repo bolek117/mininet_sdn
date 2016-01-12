@@ -62,3 +62,6 @@ vagrant-box/.vagrant/*
 
 # JetBrains IDE's
 .idea/
+
+# Mininet files (in directory for IDE completion purposes)
+mininet/
