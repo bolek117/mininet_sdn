@@ -12,6 +12,8 @@ Vagrant.configure(2) do |config|
 
   config.vm.synced_folder "../", "/home/vagrant/dmas"
   config.ssh.forward_x11 = true
+  # config.ssh.private_key_path = "~/.ssh/id_rsa"
+
 
   # Every Vagrant development environment requires a box. You can search for
   # boxes at https://atlas.hashicorp.com/search.

@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 
-from topo.simpletopo import SimpleNet
 from argparse import ArgumentParser
-
-import mininet.cli
+from mininet.net import Mininet
+from mininet.cli import CLI
+from topo.pox import POX
+from topo.simpletopo import SimpleTopo
 
 
 def parse_args():
@@ -18,8 +19,9 @@ def parse_args():
 if __name__ == '__main__':
     args = parse_args()
 
-    net = SimpleNet(args.no_of_switches)
+    simple_topo = SimpleTopo(args.no_of_switches)
+    net = Mininet(topo=simple_topo, controller=POX)
 
     net.start()
-    cli = mininet.cli.CLI(net)
+    cli = CLI(net)
     net.stop()

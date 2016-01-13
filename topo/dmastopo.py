@@ -1,16 +1,12 @@
 __author__ = 'mwitas'
 
 from mininet.topo import Topo
-from mininet import net
 from mininet.net import Mininet
+
 
 class DmasTopo(Topo):
 
     def __init__(self):
-        """
-        :type net: net
-        """
-
         Topo.__init__(self)
         self.net = None
 
