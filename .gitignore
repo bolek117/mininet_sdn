@@ -65,5 +65,5 @@ vagrant-box/.vagrant/*
 
 # Mininet & pox files (in directory for IDE completion purposes)
 mininet/
-pox/
+pox/*
 !pox/ext
