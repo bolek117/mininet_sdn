@@ -28,9 +28,10 @@ def do_server(port, size=1024):
 
         while True:
             data = client.recv(size)
+            should_end = False
+
             if data.lower().strip() != 'exit':
                 data = 'Response: ' + data
-                should_end = False
             else:
                 data = 'Closing connection\n'
                 should_end = True
