@@ -14,24 +14,38 @@ import pox.lib.util as poxutil  # Various util functions
 import pox.lib.revent as revent  # Event library
 import pox.lib.recoco as recoco  # Multitasking library
 
+from pox.lib.util import dpidToStr
+from pox.lib.revent import EventRemove
+
 # Create a logger for this component
 log = core.getLogger()
 status = dict()
 
 
+def _get_data_from_packet(parsed_packet, packet_type='ipv4'):
+    # Consider only packets of type of 'packet_type'
+    if parsed_packet.find(packet_type):
+
+        # Strip first layer of encapsulation
+        data = parsed_packet.payload
+
+        # If unpacked packet have some 'packet_type' packet inside
+        # extract it
+        while data.find(packet_type):
+            data = data.payload
+
+        # Return payload of lowest-lying packet
+        return data.payload
+
+
 def _packet_handler(event):
     parsed = event.parsed
-    desired = 'tcp'
-    ip = parsed.find(desired)
+    msg = _get_data_from_packet(parsed)
 
-    if ip is None:
-        pck_type = pkt.ETHERNET.ethernet.getNameForType(parsed.type)
-        log.info('- Packet is {}'.format(pck_type))
-        flood(event)
-    else:
-        log.info('+ Packet is {}'.format(desired))
-        log.info(event.data)
-        flood(event)
+    if len(msg) > 0:
+        log.info(msg)
+
+    flood(event)
 
 
 def flood(event):
@@ -46,6 +60,16 @@ def flood(event):
 @poxutil.eval_args
 def launch():
     """
-  The default launcher that intercepts PacketIn events
-  """
+    The default launcher that intercepts PacketIn events
+    """
+    def set_miss_length (event = None):
+        if not core.hasComponent('openflow'):
+            return
+        core.openflow.miss_send_len = 0x7fff
+        core.getLogger().info("Requesting full packet payloads")
+        return EventRemove
+
+    if set_miss_length() is None:
+        core.addListenerByName("ComponentRegistered", set_miss_length)
+
     core.openflow.addListenerByName("PacketIn", _packet_handler)
