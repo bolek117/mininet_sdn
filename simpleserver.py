@@ -26,21 +26,22 @@ def do_server(port, size=1024):
     while True:
         client, address = s.accept()
 
-        data = client.recv(size)
-        if data.lower().strip() != 'exit':
-            data = 'Response: ' + data
-            should_end = False
-        else:
-            data = 'Closing connection\n'
-            should_end = True
+        while True:
+            data = client.recv(size)
+            if data.lower().strip() != 'exit':
+                data = 'Response: ' + data
+                should_end = False
+            else:
+                data = 'Closing connection\n'
+                should_end = True
 
-        client.send(data)
-        client.close()
+            client.send(data)
+            # client.close()
 
-        if should_end:
-            s.shutdown(0)
-            s.close()
-            return
+            if should_end:
+                s.shutdown(0)
+                s.close()
+                return
 
 if __name__ == '__main__':
     args = parse_args()
