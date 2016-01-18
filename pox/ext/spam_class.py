@@ -1,25 +1,28 @@
 """
 A spam-classifying POX component
+To set parameters run with 'pox.py spam_class -parameter=value'
 """
+from pox.lib.addresses import IPAddr, EthAddr
 
 __author__ = 'mwitas'
 
-# Import some POX stuff
-from pox.core import core  # Main POX object
+import sys
+import os
+import time
 import pox.openflow.libopenflow_01 as of  # OpenFlow 1.0 library
-
-import pox.lib.packet as pkt  # Packet parsing/construction
-from pox.lib.addresses import EthAddr, IPAddr  # Address types
 import pox.lib.util as poxutil  # Various util functions
-import pox.lib.revent as revent  # Event library
-import pox.lib.recoco as recoco  # Multitasking library
-
-from pox.lib.util import dpidToStr
+import pox.openflow.nicira as nx
+from pox.core import core  # Main POX object
 from pox.lib.revent import EventRemove
 
-# Create a logger for this component
-log = core.getLogger()
-status = dict()
+_workdir = os.environ['HOME'] + '/pox/ext/'
+_mode = 0
+_words = []
+_hosts = [None, None]
+states = {'none': 1, 'pending': 2, 'ok': 3, 'wrong': 4}
+inspection_buffer = []
+
+log = core.getLogger()  # Create a logger for this component
 
 
 def _get_data_from_packet(parsed_packet, packet_type='ipv4'):
@@ -29,23 +32,81 @@ def _get_data_from_packet(parsed_packet, packet_type='ipv4'):
         # Strip first layer of encapsulation
         data = parsed_packet.payload
 
-        # If unpacked packet have some 'packet_type' packet inside
-        # extract it
+        # Strip next layers if possible to go to source packet
         while data.find(packet_type):
             data = data.payload
 
-        # Return payload of lowest-lying packet
+        # Return payload of source packet
         return data.payload
 
 
-def _packet_handler(event):
-    parsed = event.parsed
-    msg = _get_data_from_packet(parsed)
+def _set_miss_length(event=None):
+    if not core.hasComponent('openflow'):
+        return
+    core.openflow.miss_send_len = 0x7fff
+    core.getLogger().info("Setting switches to forward full packet payloads")
+    return EventRemove
 
-    if len(msg) > 0:
-        log.info(msg)
+
+def _inspect(msg):
+    if len(msg) == 0:
+        return True
+
+    msg = msg.rstrip().lower()
+
+    for line in _words:
+        # log.info('Msg: {}, wordlist: {}'.format(msg, _words))
+        if msg.find(line) != -1:
+            return False
+
+    return True
+
+
+def _packet_handler_mode1(event):
+    global inspection_buffer
+
+    # Filter only packets produced by hosts
+    match = of.ofp_match(dl_src=EthAddr(_hosts[0]))
+    match1 = of.ofp_match(dl_src=EthAddr(_hosts[1]))
+
+    # Mark to inspection only if not inspected before
+    to_inspect = False
+    buffer_id = event.ofp.buffer_id
+
+    if buffer_id not in inspection_buffer:
+        inspection_buffer.append(buffer_id)
+        to_inspect = True
+
+    if match or match1:
+        msg = _get_data_from_packet(event.parsed)
+
+        if type(msg) is str \
+                and msg is not None \
+                and to_inspect:
+
+            log.info('Inspection of {} started'.format(buffer_id))
+
+            is_ok = _inspect(msg)
+
+            if is_ok:
+                flood(event)
+            else:
+                drop(event)
+                log.error('{} SPAM packet found, dropping packet'.format(time.time()))
+
+            log.info('-----')
+            return
 
     flood(event)
+
+    # Clean buffer if it is to much elements - leave last 64 elements
+    if len(inspection_buffer) > 256:
+        inspection_buffer = inspection_buffer[:-64]
+
+
+def _packet_handler_mode2(event):
+    # Add field to packet and pass by
+    msg = _get_data_from_packet(event.parsed)
 
 
 def flood(event):
@@ -57,19 +118,59 @@ def flood(event):
     connection.send(msg)
 
 
+def drop(event):
+    return EventRemove
+
+
+def _load_wordslist(path):
+    global _words
+
+    if not os.path.isfile(path):
+        path = _workdir + path
+
+    if not os.path.isfile(path):
+        _words = []
+        raise Exception('Badwords file not found ({})'.format(path))
+
+    with open(path) as f:
+        _words = [e.rstrip().lower() for e in f.readlines()]
+
+
 @poxutil.eval_args
-def launch():
+def launch(mode=1, wordslist='badwords.txt', h1_mac='00-00-00-00-00-00', h2_mac='00-00-00-00-00-00'):
     """
     The default launcher that intercepts PacketIn events
+    Modes:
+        1 - hold on controller util classification ends
+        2 - inspect on controller but allow forwarding to edge switch
     """
-    def set_miss_length (event = None):
-        if not core.hasComponent('openflow'):
-            return
-        core.openflow.miss_send_len = 0x7fff
-        core.getLogger().info("Requesting full packet payloads")
-        return EventRemove
+    global _mode
+    _mode = mode
 
-    if set_miss_length() is None:
-        core.addListenerByName("ComponentRegistered", set_miss_length)
+    _hosts[0] = h1_mac
+    _hosts[1] = h2_mac
 
-    core.openflow.addListenerByName("PacketIn", _packet_handler)
+    try:
+        _load_wordslist(wordslist)
+    except Exception as e:
+        log.error(e.message)
+        log.error('All packets will be marked as "valid"')
+
+        while True:
+            opt = raw_input("Do you want to continue (y/n)? ")
+            if opt == 'y':
+                break
+            elif opt == 'n':
+                log.error('Operation terminated')
+                sys.exit(-1)
+
+    if _set_miss_length() is None:
+        core.addListenerByName("ComponentRegistered", _set_miss_length)
+
+    if _mode == 1:
+        core.openflow.addListenerByName("PacketIn", _packet_handler_mode1)
+    elif _mode == 2:
+        core.openflow.addListenerByName("PacketIn", _packet_handler_mode2)
+    else:
+        log.error('Invalid mode')
+        sys.exit(-2)
