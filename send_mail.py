@@ -47,14 +47,3 @@ if __name__ == '__main__':
 
   server = smtplib.SMTP('localhost')
   server.sendmail(args.send_from, args.send_to, msg.as_string())
-
-
-
-
-
-
-
-
-    
-
-    
