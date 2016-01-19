@@ -27,8 +27,6 @@ _gateway_mac = EthAddr('00-00-00-00-00-00')
 inspection_dict = {}
 states = {'none': 1, 'pending': 2, 'ok': 3, 'wrong': 4}
 
-log = core.getLogger()  # Create a logger for this component
-
 
 def _get_data_from_packet(parsed_packet, packet_type='ipv4'):
     # Consider only packets of type of 'packet_type'
@@ -143,8 +141,8 @@ def launch(mode=1, wordslist='badwords.txt', gateway_mac='00-00-00-00-00-00'):
         2 - inspect on controller but allow forwarding to edge switch
     """
     global _mode
-    _mode = mode
 
+    _mode = mode
     _gateway_mac = EthAddr(gateway_mac)
 
     try:
