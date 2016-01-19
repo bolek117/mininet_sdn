@@ -12,10 +12,10 @@ cat >> /usr/bin/spamfilter.sh << EOF
 SENDMAIL=/usr/sbin/sendmail
 SPAMASSASSIN=/usr/bin/spamc
 
-logger <<<"Spam filter piping to SpamAssassin, then to: $SENDMAIL $@"
-${SPAMASSASSIN} | ${SENDMAIL} "$@"
+logger <<<"Spam filter piping to SpamAssassin, then to: \${SENDMAIL} \$@"
+\${SPAMASSASSIN} | \${SENDMAIL} "\$@"
 
-exit $?
+exit \$?
 EOF
 
 chmod 755 /usr/bin/spamfilter.sh
