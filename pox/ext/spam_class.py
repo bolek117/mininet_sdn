@@ -17,9 +17,15 @@ from pox.lib.revent import EventRemove
 _workdir = os.environ['HOME'] + '/pox/ext/'
 _mode = 0
 _words = []
-_hosts = [None, None]
-states = {'none': 1, 'pending': 2, 'ok': 3, 'wrong': 4}
+log = core.getLogger()  # Create a logger for this component
+
+# Mode 1 specific fields
 inspection_buffer = []
+
+# Mode 2 specific fields
+_gateway_mac = EthAddr('00-00-00-00-00-00')
+inspection_dict = {}
+states = {'none': 1, 'pending': 2, 'ok': 3, 'wrong': 4}
 
 log = core.getLogger()  # Create a logger for this component
 
@@ -64,39 +70,32 @@ def _inspect(msg):
 def _packet_handler_mode1(event):
     global inspection_buffer
 
-    # Filter only packets produced by hosts
-    match = of.ofp_match(dl_src=EthAddr(_hosts[0]))
-    match1 = of.ofp_match(dl_src=EthAddr(_hosts[1]))
-
-    # Mark to inspection only if not inspected before
-    to_inspect = False
     buffer_id = event.ofp.buffer_id
 
+    # If not inspected before - note that inspection is pending, else pass-by
     if buffer_id not in inspection_buffer:
         inspection_buffer.append(buffer_id)
-        to_inspect = True
+    else:
+        flood(event)
+        return
 
-    if match or match1:
-        msg = _get_data_from_packet(event.parsed)
+    msg = _get_data_from_packet(event.parsed)
 
-        if type(msg) is str \
-                and msg is not None \
-                and to_inspect:
+    # Inspect only non-binary content and not empty packets
+    if type(msg) is str and len(msg) != 0:
+        log.info('Inspection of {} started, content [{}]'.format(buffer_id, msg.rstrip()))
+        is_ok = _inspect(msg)
 
-            log.info('Inspection of {} started'.format(buffer_id))
+        if is_ok:
+            flood(event)
+        else:
+            drop(event)
+            log.error('{} SPAM packet found, dropping packet'.format(time.time()))
 
-            is_ok = _inspect(msg)
-
-            if is_ok:
-                flood(event)
-            else:
-                drop(event)
-                log.error('{} SPAM packet found, dropping packet'.format(time.time()))
-
-            log.info('-----')
-            return
-
-    flood(event)
+        log.info('-----')
+        return
+    else:
+        flood(event)
 
     # Clean buffer if it is to much elements - leave last 64 elements
     if len(inspection_buffer) > 256:
@@ -104,8 +103,8 @@ def _packet_handler_mode1(event):
 
 
 def _packet_handler_mode2(event):
-    # Add field to packet and pass by
-    msg = _get_data_from_packet(event.parsed)
+    # TODO
+    pass
 
 
 def flood(event):
@@ -136,7 +135,7 @@ def _load_wordslist(path):
 
 
 @poxutil.eval_args
-def launch(mode=1, wordslist='badwords.txt', h1_mac='00-00-00-00-00-00', h2_mac='00-00-00-00-00-00'):
+def launch(mode=1, wordslist='badwords.txt', gateway_mac='00-00-00-00-00-00'):
     """
     The default launcher that intercepts PacketIn events
     Modes:
@@ -146,8 +145,7 @@ def launch(mode=1, wordslist='badwords.txt', h1_mac='00-00-00-00-00-00', h2_mac=
     global _mode
     _mode = mode
 
-    _hosts[0] = h1_mac
-    _hosts[1] = h2_mac
+    _gateway_mac = EthAddr(gateway_mac)
 
     try:
         _load_wordslist(wordslist)
