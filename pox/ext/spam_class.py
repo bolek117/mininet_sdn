@@ -11,7 +11,6 @@ import os
 import time
 import pox.openflow.libopenflow_01 as of  # OpenFlow 1.0 library
 import pox.lib.util as poxutil  # Various util functions
-import pox.openflow.nicira as nx
 from pox.core import core  # Main POX object
 from pox.lib.revent import EventRemove
 
