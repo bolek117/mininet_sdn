@@ -1,5 +1,26 @@
 # Undelayed forwarding in Software Defined Networks.
 
+## How to use?
+
+At first clone repository to your local disc.
+
+Because project is based on Vagrant-provided Ubuntu virtual machine, you must install Vagrant.
+After that, on host machine, go to *Vagrant-box/* folder and run VM by command **vagrant up**.
+At first time it can take a while.
+When your VM will be ready, you can establish SSH connection by command **vagrant ssh**.
+You will need two separate SSH sessions (or use unix **screen** program).
+
+In first SSH session go to the folder *~/dmas/* and execute command **python ./runner.py**.
+You can read help for runner by executing **python ./runner.py -h**.
+For development purposes it is convenient to use remote controller instead of controller run by runner, so do not provide *-c* parameter
+(if controller is started by runner, there is no option to see controller logs which are extremely useful during development).
+
+If you do not provide *-c* parameter for runner, in second SSH session go to the folder *~/pox/* and execute command **python ./pox.py MODULE_NAME**.
+MODULE_NAME can be any Python file located in folder *~/dmas/pox/ext/* but with stripped *.py* extension.
+
+Now you have working topology with controller logging to the screen any ipv4 message sent between hosts.
+You can write your own Python client-server that will be simulating flow of packets described in your task.
+
 ## Problem:
 
 Classical enterprise topology could look like this:
