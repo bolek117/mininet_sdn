@@ -3,7 +3,6 @@ A spam-classifying POX component
 To set parameters run with 'pox.py spam_class -parameter=value'
 """
 from pox.lib.addresses import IPAddr, EthAddr
-from pox.lib.packet import tcp
 
 __author__ = 'mwitas'
 

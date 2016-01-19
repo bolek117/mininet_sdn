@@ -70,6 +70,12 @@ The 3 groups you divide will need to check this using mentioned inspection algor
 * 2nd group - web page analysis and blocking when classified as for example not suitable for children (for example using forbidden phrases on the site to classify it)
 * 3rd group - mail attachment scaning (controller should use some open-source mechanism to scan attachments)
 
+### Mail scanning 
+
+The open-source mechanism chosen for mail scanning is **clamav** which is an open source standard for mail gateway scanning sfotware. 
+It's installation has been added to the initalizaiton process of vagrant (**vagrant up**), when the machine is created. 
+It has been configure to listen on the port 3310
+
 ## Links, guides:
 - http://mininet.org/walkthrough/ Installation of mininet guide.
 - https://github.com/mininet/openflow-tutorial/wiki Complete guide - how to create topology, how to clone, install, program controller (most examples are for Pox) to perform switching action, router action, firewall action and links for further analysis.
