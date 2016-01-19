@@ -3,8 +3,10 @@
 __author__ = 'jblaszczyk'
 
 import smtplib
+from argparse import ArgumentParser
 from email.MIMEMultipart import MIMEMultipart
 from email.MIMEBase import MIMEBase
+from email.mime.text import MIMEText
 from email import Encoders
 
 def parse_args():
@@ -21,23 +23,30 @@ def parse_args():
     
     return parser.parse_args()
 
-if __name__ = '__main__':
+if __name__ == '__main__':
   args = parse_args()
 
   msg = MIMEMultipart()
-  msg['Subject'] = textfile 
-  msg['From'] = send_from
-  msg['To'] = send_to
+  msg['Subject'] = 'This is an spam mail'
+  msg['From'] = args.send_from
+  msg['To'] = args.send_to
 
   if args.sendfile is not None:
     part = MIMEBase('application', "octet-stream")
-    part.set_payload(open(sendfile, "rb").read())
+    part.set_payload(open(args.sendfile, "rb").read())
     Encoders.encode_base64(part)
-    part.add_header('Content-Disposition', 'attachment; filename=sendfile')
+    part.add_header('Content-Disposition', 'attachment; filename=args.sendfile')
     msg.attach(part)
 
+  if args.textfile is not None:
+    fp = open(args.textfile, 'rb')
+    text = fp.read()
+    part = MIMEText(text, 'plain')
+    msg.attach(part)
+    fp.close()
+
   server = smtplib.SMTP('localhost')
-  server.sendmail(send_from, send_to, msg.as_string())
+  server.sendmail(args.send_from, args.send_to, msg.as_string())
 
 
 

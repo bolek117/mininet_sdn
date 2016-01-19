@@ -1,9 +1,9 @@
 #!/bin/bash -x
 
 echo "----> Update sources"
-apt-get -q update
+apt-get -qq update
 echo "----> Install lightweight antivirus scanner"
-apt-get -y -q install clamav-daemon
+apt-get -y -qq install clamav-daemon
 echo "----> Installing malware definition. This may take some time"
 freshclam --quiet
 echo "----> Setup socket for scanner (3310)"
