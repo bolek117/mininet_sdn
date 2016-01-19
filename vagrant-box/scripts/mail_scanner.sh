@@ -1,7 +1,5 @@
 #!/bin/bash -x
 
-echo "----> Update sources"
-apt-get -qq update
 echo "----> Install lightweight antivirus scanner"
 apt-get -y -qq install clamav-daemon
 echo "----> Installing malware definition. This may take some time"

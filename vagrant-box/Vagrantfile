@@ -34,7 +34,10 @@ Vagrant.configure(2) do |config|
   config.vm.provision "shell", inline: <<-SHELL
     rm -r /home/vagrant/pox/ext
     ln -s /home/vagrant/dmas/pox/ext /home/vagrant/pox/ext
+    echo "----> Update sources"
+    sudo apt-get -qq update
     sudo sh /home/vagrant/dmas/vagrant-box/scripts/smtp_server.sh
+    sudo sh /home/vagrant/dmas/vagrant-box/scripts/spam_filter.sh
     sudo sh /home/vagrant/dmas/vagrant-box/scripts/mail_scanner.sh
   SHELL
 end
