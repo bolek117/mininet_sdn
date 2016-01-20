@@ -26,7 +26,7 @@ inspection_buffer = []
 # Mode 2 specific fields
 # _gateway_mac = EthAddr('00-00-00-00-00-00')
 inspection_dict = {}
-states = {'none': 1, 'pending': 2, 'ok': 3, 'wrong': 4}
+states = {'none': 1, 'pending': 2, 'ok': 3, 'wrong': 4, 'not_for_inspection': 5}
 _gateway_dpid = 0
 
 
@@ -54,6 +54,8 @@ def _set_miss_length(event=None):
 
 
 def _inspect(msg):
+    time.sleep(0.5)     # Fake execution time
+
     if len(msg) == 0:
         return True
 
@@ -114,10 +116,10 @@ def _decide_by_inspection_result(event):
     buffer_id = event.ofp.buffer_id
     state = inspection_dict[buffer_id]
 
-    if state is states['ok']:
+    if state is states['ok'] or state is states['not_for_inspection']:
         flood(event)
     elif state is states['wrong']:
-        log.info('Wrong status, dropping buffer {}...'.format(buffer_id))
+        log.info('Spam found, dropping buffer {}...'.format(buffer_id))
         drop(event)
     else:
         return False
@@ -126,29 +128,44 @@ def _decide_by_inspection_result(event):
 
 
 def _packet_handler_mode2(event):
+    global inspection_dict
+
     packet = event.parsed
     buffer_id = event.ofp.buffer_id
+    dpid = event.dpid
+
+    def _get_state_name(buffer_id):
+        for key, value in states.iteritems():
+            if value == inspection_dict[buffer_id]:
+                return key
+        return None
 
     # Packet has started inspection
     if buffer_id in inspection_dict.keys():
-        log.info('Packet {} found in inspection table'.format(buffer_id))
+
+        # If not for inspection, just pass-by and exit from function
+        if inspection_dict[buffer_id] is states['not_for_inspection']:
+            flood(event)
+            return
+
+        log.info('[{}] Packet {} found in inspection table'.format(dpid, buffer_id))
 
         # Packet is on gateway (edge switch)
-        if event.dpid == _gateway_dpid:
-            log.info('Edge switch')
+        if dpid == _gateway_dpid:
+            log.info('[{}] Edge switch'.format(dpid))
             while not _decide_by_inspection_result(event):
                 wait_time = 1.0 / 100  # 0.01 second, 10 miliseconds
 
-                log.info('Inspection not complete ({}), Waiting for {} seconds'.format(
-                    states.get(inspection_dict[buffer_id]), wait_time))
+                log.info('[{}] Inspection not complete ({}), Waiting for {} seconds'
+                         .format(dpid, _get_state_name(buffer_id), wait_time))
                 time.sleep(wait_time)
 
-            log.info('Inspection complete, result: {}'.format(states.get(inspection_dict[buffer_id])))
+            log.info('[{}] Inspection complete, result: {}'.format(dpid, _get_state_name(buffer_id)))
         else:
-            # log.info('Passing by intermediate switch {}...'.format(event.dpid))
-            _decide_by_inspection_result(event)
+            if _decide_by_inspection_result(event):
+                log.info('[{}] Passing by intermediate switch with status {}...'.format(event.dpid, _get_state_name(buffer_id)))
     else:
-        # log.info('Packet {} not found in inspection table'.format(buffer_id))
+        log.info('[{}] Packet {} not found in inspection table'.format(dpid, buffer_id))
 
         inspection_dict[buffer_id] = states['none']
         flood(event)
@@ -156,20 +173,21 @@ def _packet_handler_mode2(event):
         msg = _get_data_from_packet(packet)
 
         if _is_valid_for_inspection(msg):
-            log.info('Is valid for inspection [{}]'.format(msg.rstrip()))
+            log.info('[{}] Is valid for inspection [{}]'.format(dpid, msg.rstrip()))
 
             # Mark as inspection pending and start inspection
             inspection_dict[buffer_id] = states['pending']
-            log.info('Inspecting')
+            log.info('[{}] Inspecting'.format(dpid))
             if _inspect(_get_data_from_packet(packet)):
                 inspection_dict[buffer_id] = states['ok']
             else:
                 inspection_dict[buffer_id] = states['wrong']
-            log.info('Inspected, state {}'.format(states.get(inspection_dict[buffer_id])))
+            log.info('[{}] Inspected, state {}'.format(dpid, _get_state_name(buffer_id)))
         else:
-            log.info('Not valid for inspection')
-            inspection_dict[buffer_id] = states['ok']
-            log.info('Setting state to "ok"')
+            log.info('[{}] Not valid for inspection'.format(dpid))
+            inspection_dict[buffer_id] = states['not_for_inspection']
+            # log.info('[{}] Setting state to "not_for_inspection".\nChecking actual state: ... {}'
+            #          .format(dpid, _get_state_name(buffer_id)))
 
     log.info('-----')
 

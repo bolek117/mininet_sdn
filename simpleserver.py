@@ -8,6 +8,7 @@ A simple echo server
 import socket
 import argparse
 
+s = None
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -16,6 +17,8 @@ def parse_args():
 
 
 def do_server(port, size=1024):
+    global s
+
     host = ''
     backlog = 5
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -42,8 +45,19 @@ def do_server(port, size=1024):
             if should_end:
                 s.shutdown(0)
                 s.close()
+
+                s = None
                 return
 
 if __name__ == '__main__':
     args = parse_args()
-    do_server(args.p)
+
+    try:
+        do_server(args.p)
+    except:
+        if s is not None:
+            try:
+                s.shutdown(0)
+                s.close()
+            except:
+                pass
